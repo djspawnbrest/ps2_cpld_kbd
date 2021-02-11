@@ -19,10 +19,10 @@ entity cpld_kbd is
 			O_RESET		: out std_logic;
 			O_TURBO	 	: out std_logic;
 			O_MAGICK		: out std_logic;
-			O_SPECIAL	: out std_logic;
+			O_SPECIAL	: out std_logic := 'Z';
 			
 			O_CLK			: out std_logic;
-			O_TEST 		: out std_logic;
+			--O_TEST 		: out std_logic;
 			O_DEBUG 		: out std_logic
 	);
     end cpld_kbd;
@@ -36,7 +36,7 @@ architecture RTL of cpld_kbd is
 	 signal reset   : std_logic := '0';
 	 signal turbo   : std_logic := '0';
 	 signal magick  : std_logic := '0';
-	 signal special : std_logic := '0';
+	 signal special : std_logic := 'Z';
 	 
 	 -- spi
 	 signal spi_do_valid : std_logic := '0';
@@ -94,9 +94,13 @@ begin
 		O_RESET <= not(reset);
 		O_MAGICK <= not(magick);
 		O_TURBO <= not(turbo);
-		O_SPECIAL <= not(special);
+		if special = '1' then
+			O_SPECIAL <= not(special);
+		else
+			O_SPECIAL <= 'Z';
+		end if;
 
-		O_TEST <= reset;
+		--O_TEST <= reset;
 		O_DEBUG <= kb_data(6); -- enter pressed
 
 	end if;
