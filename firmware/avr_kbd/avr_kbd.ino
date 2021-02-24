@@ -984,12 +984,6 @@ void setup()
   // restore saved modes from EEPROM
   eeprom_restore_values();
   
-  #if DEBUG_MODE
-    Serial.println(F("Reset on boot..."));
-  #endif
-
-  do_reset();
-  
 #if DEBUG_MODEE
   uint16_t c = kbd.read( );
   if( (c & 0xFF) == PS2_KEY_ECHO || (c & 0xFF) == PS2_KEY_BAT ) {
@@ -1006,6 +1000,14 @@ void setup()
       }
 #endif
 
+  
+  #if DEBUG_MODE
+    Serial.println(F("Reset on boot..."));
+  #endif
+  
+  //Wait for SPECCY:)
+  delay(1500);
+  do_reset();
   digitalWrite(LED_KBD, LOW);  
 }
 
