@@ -53,11 +53,11 @@
 
 //  buffer sizes keyboard RX and TX, then key reading buffer
 // Minimum size 8 can be larger
-#define _RX_BUFFER_SIZE  8
+#define _RX_BUFFER_SIZE  32
 // Minimum size 6 can be larger
 #define _TX_BUFFER_SIZE  6
 // Output Buffer of unsigned int values. Minimum size 4 can be larger
-#define _KEY_BUFF_SIZE   4
+#define _KEY_BUFF_SIZE   16
 
 /* private defines for library files not global */
 /* _ps2mode status flags */

@@ -5,7 +5,7 @@
 
 
 #define DEBUG_MODE 0
-#define DEBUG_KEY 1
+#define DEBUG_KEY 0
 
 // ---- Pins for Atmega328
 #define PIN_KBD_CLK 3 // PD3
@@ -34,6 +34,7 @@ bool blink_state = false;
 
 bool is_turbo = false;
 bool is_special = false;
+bool is_caps = false;
 
 unsigned long t = 0;  // current time
 unsigned long tl = 0; // blink poll time
@@ -49,7 +50,7 @@ void fill_kbd_matrix(int sc)
 {
 
   static bool is_up=false;
-  static bool is_ctrl=false, is_alt=false, is_del=false, is_bksp = false, is_shift = false, is_esc = false, is_ss_used = false, is_cs_used = false;
+  static bool is_ctrl=false, is_alt=false, is_del=false, is_bksp = false, is_shift = false, is_esc = false, is_ss_used = false, is_cs_used = false, is_caps_used = false;
 
   //BREAK/PAUSE key check not in switch-case ScanCode: 0x6
   //Special key as 1024/128 - BREAK/PAUSE
@@ -78,6 +79,11 @@ void fill_kbd_matrix(int sc)
     return;
   }
 
+  //check CAPS LOCK
+  if (is_caps) {
+    matrix[ZX_K_CS] = true;
+  }
+
   // is key released prefix
   if (sc & PS2_BREAK && !is_up) {
     is_up = 1;
@@ -91,8 +97,26 @@ void fill_kbd_matrix(int sc)
 
   is_ss_used = false;
   is_cs_used = false;
+  is_caps_used = false;
 
   switch (scancode) {
+
+    // CapsLock
+    case PS2_KEY_CAPS:
+      //matrix[ZX_K_SS] = !is_up;
+      matrix[ZX_K_CS] = !is_up;
+      //is_cs_used = !is_up;
+      is_caps = !is_up;
+      bitWrite(leds, 2, !is_up);
+      kbd.setLock(leds);
+      #if DEBUG_KEY
+        Serial.print(F("CS (CAPS): "));
+        Serial.println(matrix[ZX_K_CS]);
+        Serial.println(scancode, HEX);
+        Serial.print(F("leds: "));
+        Serial.println(leds, BIN);
+      #endif
+      break;
   
     // Shift -> CS for ZX
     case PS2_KEY_L_SHIFT: 
@@ -486,7 +510,8 @@ void fill_kbd_matrix(int sc)
     // '/" -> SS+P / SS+7
     case PS2_KEY_APOS:
       matrix[ZX_K_SS] = !is_up;
-      matrix[is_shift ? ZX_K_P : ZX_K_7] = !is_up;
+      matrix[ (is_shift or is_caps) ? ZX_K_P : ZX_K_7] = !is_up;
+      is_caps_used = is_caps ? true : false;
       is_ss_used = is_shift;
       #if DEBUG_KEY
         Serial.print(F("SS+P/SS+7 (QUOTE): "));
@@ -497,7 +522,8 @@ void fill_kbd_matrix(int sc)
     // ,/< -> SS+N / SS+R
     case PS2_KEY_COMMA:
       matrix[ZX_K_SS] = !is_up;
-      matrix[is_shift ? ZX_K_R : ZX_K_N] = !is_up;
+      matrix[ (is_shift or is_caps) ? ZX_K_R : ZX_K_N] = !is_up;
+      is_caps_used = is_caps ? true : false;
       is_ss_used = is_shift;
       #if DEBUG_KEY
         Serial.print(F("SS+N/SS+R (COMMA): "));
@@ -509,7 +535,8 @@ void fill_kbd_matrix(int sc)
     case PS2_KEY_DOT:
     case PS2_KEY_KP_DOT:
       matrix[ZX_K_SS] = !is_up;
-      matrix[is_shift ? ZX_K_T : ZX_K_M] = !is_up;
+      matrix[ (is_shift or is_caps) ? ZX_K_T : ZX_K_M] = !is_up;
+      is_caps_used = is_caps ? true : false;
       is_ss_used = is_shift;
       #if DEBUG_KEY
         Serial.print(F("SS+M/SS+T (PERIOD): "));
@@ -520,7 +547,8 @@ void fill_kbd_matrix(int sc)
     // ;/: -> SS+O / SS+Z
     case PS2_KEY_SEMI:
       matrix[ZX_K_SS] = !is_up;
-      matrix[is_shift ? ZX_K_Z : ZX_K_O] = !is_up;
+      matrix[ (is_shift or is_caps) ? ZX_K_Z : ZX_K_O] = !is_up;
+      is_caps_used = is_caps ? true : false;
       is_ss_used = is_shift;
       #if DEBUG_KEY
         Serial.print(F("SS+0/SS+Z (SEMICOLON): "));
@@ -531,7 +559,7 @@ void fill_kbd_matrix(int sc)
     // [,{ -> SS+Y / SS+F
     case PS2_KEY_OPEN_SQ:
       if (!is_up) {
-        send_macros(is_shift ? ZX_K_F : ZX_K_Y);
+        send_macros( (is_shift or is_caps) ? ZX_K_F : ZX_K_Y);
       }
       #if DEBUG_KEY
         Serial.print(F("SS+Y/SS+F (L BRACKET): "));
@@ -542,7 +570,7 @@ void fill_kbd_matrix(int sc)
     // ],} -> SS+U / SS+G
     case PS2_KEY_CLOSE_SQ:
       if (!is_up) {
-        send_macros(is_shift ? ZX_K_G : ZX_K_U);
+        send_macros( (is_shift or is_caps) ? ZX_K_G : ZX_K_U);
       }
       #if DEBUG_KEY
         Serial.print(F("SS+U/SS+G (R BRACKET): "));
@@ -554,7 +582,8 @@ void fill_kbd_matrix(int sc)
     case PS2_KEY_DIV:
     case PS2_KEY_KP_DIV:
       matrix[ZX_K_SS] = !is_up;
-      matrix[is_shift ? ZX_K_C : ZX_K_V] = !is_up;
+      matrix[ (is_shift or is_caps) ? ZX_K_C : ZX_K_V] = !is_up;
+      is_caps_used = is_caps ? true : false;
       is_ss_used = is_shift;
       #if DEBUG_KEY
         Serial.print(F("SS+V/SS+C (SLASH): "));
@@ -566,7 +595,7 @@ void fill_kbd_matrix(int sc)
     case PS2_KEY_BACK:
     case PS2_KEY_EUROPE2:
       if (!is_up) {
-        send_macros(is_shift ? ZX_K_S : ZX_K_D);
+        send_macros( (is_shift or is_caps) ? ZX_K_S : ZX_K_D);
       }
       #if DEBUG_KEY
         Serial.print(F("SS+D/SS+S (BACK SLASH): "));
@@ -577,7 +606,8 @@ void fill_kbd_matrix(int sc)
     // =,+ -> SS+L / SS+K
     case PS2_KEY_EQUAL:
       matrix[ZX_K_SS] = !is_up;
-      matrix[is_shift ? ZX_K_K : ZX_K_L] = !is_up;
+      matrix[ (is_shift or is_caps) ? ZX_K_K : ZX_K_L] = !is_up;
+      is_caps_used = is_caps ? true : false;
       is_ss_used = is_shift;
       #if DEBUG_KEY
         Serial.print(F("SS+L/SS+K (EQUALS): "));
@@ -588,7 +618,8 @@ void fill_kbd_matrix(int sc)
     // -,_ -> SS+J / SS+0
     case PS2_KEY_MINUS:
       matrix[ZX_K_SS] = !is_up;
-      matrix[is_shift ? ZX_K_0 : ZX_K_J] = !is_up;
+      matrix[ (is_shift or is_caps) ? ZX_K_0 : ZX_K_J] = !is_up;
+      is_caps_used = is_caps ? true : false;
       is_ss_used = is_shift;
       #if DEBUG_KEY
         Serial.print(F("SS+J/SS+0 (MINUS/_): "));
@@ -598,10 +629,10 @@ void fill_kbd_matrix(int sc)
 
     // `,~ -> SS+X / SS+A
     case PS2_KEY_SINGLE:
-      if (is_shift and !is_up) {
-        send_macros(is_shift ? ZX_K_A : ZX_K_X);
+      if ( (is_shift or is_caps) and !is_up) {
+        send_macros( (is_shift or is_caps) ? ZX_K_A : ZX_K_X);
       }
-      if (!is_shift) {
+      if (!is_shift or !is_caps) {
         matrix[ZX_K_SS] = !is_up;
         matrix[ZX_K_X] = !is_up;
         is_ss_used = is_shift;
@@ -650,22 +681,6 @@ void fill_kbd_matrix(int sc)
       #if DEBUG_KEY
         Serial.print(F("CS+I (TAB): "));
         Serial.println(scancode, HEX);
-      #endif
-      break;
-
-    // CapsLock
-    case PS2_KEY_CAPS:
-      //matrix[ZX_K_SS] = !is_up;
-      matrix[ZX_K_CS] = !is_up;
-      is_cs_used = !is_up;
-      bitWrite(leds, 2, !is_up);
-      kbd.setLock(leds);
-      #if DEBUG_KEY
-        Serial.print(F("CS (CAPS): "));
-        Serial.println(matrix[ZX_K_CS]);
-        Serial.println(scancode, HEX);
-        Serial.print(F("leds: "));
-        Serial.println(leds, BIN);
       #endif
       break;
 
@@ -724,6 +739,7 @@ void fill_kbd_matrix(int sc)
         is_shift = false;
         is_ss_used = false;
         is_cs_used = false;
+        is_caps_used = false;
         do_reset();
         #if DEBUG_KEY
           Serial.print(F("RESET (F12): "));
@@ -738,7 +754,9 @@ void fill_kbd_matrix(int sc)
       matrix[ZX_K_CS] = false;
   }
 
-  
+  if (is_caps_used and !is_up) {
+      matrix[ZX_K_CS] = false;  
+  }
 
   // Ctrl+Alt+Del -> RESET
   if (is_ctrl && is_alt && is_del) {
@@ -748,6 +766,7 @@ void fill_kbd_matrix(int sc)
     is_shift = false;
     is_ss_used = false;
     is_cs_used = false;
+    is_caps_used = false;
     do_reset();
     #if DEBUG_KEY
         Serial.print(F("H RESET (ALT+CTRL+DEL): "));
@@ -763,6 +782,7 @@ void fill_kbd_matrix(int sc)
     is_shift = false;
     is_ss_used = false;
     is_cs_used = false;
+    is_caps_used = false;
     clear_matrix(ZX_MATRIX_SIZE);
     matrix[ZX_K_RESET] = true;
     transmit_keyboard_matrix();
@@ -843,6 +863,7 @@ void send_macros(uint8_t pos)
 void do_reset()
 {
   //clear_matrix(ZX_MATRIX_SIZE);
+  if (is_caps) { matrix[ZX_K_CS] = false; }
   matrix[ZX_K_RESET] = true;
   transmit_keyboard_matrix();
   #if DEBUG_KEY
@@ -853,6 +874,11 @@ void do_reset()
   transmit_keyboard_matrix();
   delay(500);
   clear_matrix(ZX_MATRIX_SIZE);
+  if (is_caps) {
+    delay(100);
+    matrix[ZX_K_CS] = false;
+    transmit_keyboard_matrix();
+  }
 }
 
 void do_magick()
